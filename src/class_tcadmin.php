@@ -2,7 +2,7 @@
 /**
 * TCAdmin Class
 *
-* Allows you to perform various actions via TCAdmin;
+* Allows you to perform various actions via TCAdmin
 *
 */
 
@@ -108,7 +108,7 @@ class TCAdmin
       'ctl00$DefaultScriptManager' => 'ctl00$ctl00$PageIcons1$RadToolBarPageIconsPanel|ctl00$PageIcons1$RadToolBarPageIcons',
       'RadAJAXControlID' => 'ctl00_DefaultAjaxManager',
       '__EVENTTARGET' => 'ctl00$PageIcons1$RadToolBarPageIcons',
-      '__EVENTARGUMENT' => '1', // Changes based on how many tiles exit on service page panel.
+      '__EVENTARGUMENT' => '2', // Changes based on how many tiles exit on service page panel.
       '__EVENTVALIDATION' => $this->event_validation,
       '__VSTATE' => $this->vstate,
     ];
@@ -124,8 +124,58 @@ class TCAdmin
     else
       return false;
     
+    echo $fast_download_link;
+    
     //Run Fast DL sync using one time link
     $r = $this->guzzle_client->request('GET', $fast_download_link);
+    
+    return true;
+  }
+  
+  public function perform_steamupdate($service_id)
+  {
+    if (!$this->is_authed) {
+      trigger_error('Must be authed to use this function.');
+      return false;
+    }
+    
+    //Get service home page URL
+    $service_page_url = $this->service_home_url . '?serviceid=' . $service_id;
+    
+    $r = $this->guzzle_client->request('GET', $service_page_url, [
+      'headers' => $this->browser_like_headers,
+    ]);
+    
+    if (!$this->get_anti_forgery_tokens($r->getBody()))
+      return false;
+    
+    //Send POST to fetch fast download link
+    $headers = $this->browser_like_headers;
+    $headers['Referer'] = $service_page_url; //change referer
+    $headers['X-MicrosoftAjax'] = 'Delta=true'; //add required field
+    
+    $payload = [
+      'ctl00$DefaultScriptManager' => 'ctl00$ctl00$PageIcons1$RadToolBarPageIconsPanel|ctl00$PageIcons1$RadToolBarPageIcons',
+      'RadAJAXControlID' => 'ctl00_DefaultAjaxManager',
+      '__EVENTTARGET' => 'ctl00$PageIcons1$RadToolBarPageIcons',
+      '__EVENTARGUMENT' => '0', // Changes based on how many tiles exit on service page panel.
+      '__EVENTVALIDATION' => $this->event_validation,
+      '__VSTATE' => $this->vstate,
+    ];
+    
+    $r = $this->guzzle_client->request('POST', $service_page_url, [
+      'headers' => $headers,
+      'form_params' => $payload,
+    ]);
+    
+    //Fetch single use Steam Update Link
+    if (preg_match("/TCAdmin.Utility.openWindow\('(http:\/\/.*\/Monitor\/Public\/GameHosting\/SteamUpdate.aspx\?key=.*?)', 'ConsoleWindow', 'Run the Steam update on/", $r->getBody(), $steam_update_link))
+      $steam_update_link = $steam_update_link[1];
+    else
+      return false;
+    
+    //Run Steam update using one time link
+    $r = $this->guzzle_client->request('GET', $steam_update_link);
     
     return true;
   }
