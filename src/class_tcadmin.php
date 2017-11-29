@@ -124,8 +124,6 @@ class TCAdmin
     else
       return false;
     
-    echo $fast_download_link;
-    
     //Run Fast DL sync using one time link
     $r = $this->guzzle_client->request('GET', $fast_download_link);
     
