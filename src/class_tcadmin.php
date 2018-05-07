@@ -18,7 +18,9 @@ class TCAdmin
   
   //Anti-forgery tokens
   private $event_validation;
-  private $vstate;
+  private $viewstate;
+  private $viewstate_generator;
+  private $viewstate_encrypted;
   
   private $guzzle_client;
   private $is_authed = false;
@@ -60,7 +62,9 @@ class TCAdmin
       'ctl00$ContentPlaceHolderMain$Login1$DropDownListTheme' => '1:7dbc12ef-0ca8-4020-b0db-3d49f6386218', //TODO: Change to default
       '__EVENTTARGET' => 'ctl00$ContentPlaceHolderMain$Login1$ButtonLogin',
       '__EVENTVALIDATION' => $this->event_validation,
-      '__VSTATE' => $this->vstate,
+      '__VIEWSTATE' => $this->viewstate,
+      '__VIEWSTATEGENERATOR' => $this->viewstate_generator,
+      '__VIEWSTATEENCRYPTED' => $this->viewstate_encrypted,
     ];
     
     $r = $this->guzzle_client->request('POST', $this->auth_url, [
@@ -110,7 +114,9 @@ class TCAdmin
       '__EVENTTARGET' => 'ctl00$PageIcons1$RadToolBarPageIcons',
       '__EVENTARGUMENT' => '2', // Changes based on how many tiles exit on service page panel.
       '__EVENTVALIDATION' => $this->event_validation,
-      '__VSTATE' => $this->vstate,
+      '__VIEWSTATE' => $this->viewstate,
+      '__VIEWSTATEGENERATOR' => $this->viewstate_generator,
+      '__VIEWSTATEENCRYPTED' => $this->viewstate_encrypted,
     ];
     
     $r = $this->guzzle_client->request('POST', $service_page_url, [
@@ -158,7 +164,9 @@ class TCAdmin
       '__EVENTTARGET' => 'ctl00$PageIcons1$RadToolBarPageIcons',
       '__EVENTARGUMENT' => '0', // Changes based on how many tiles exit on service page panel.
       '__EVENTVALIDATION' => $this->event_validation,
-      '__VSTATE' => $this->vstate,
+      '__VIEWSTATE' => $this->viewstate,
+      '__VIEWSTATEGENERATOR' => $this->viewstate_generator,
+      '__VIEWSTATEENCRYPTED' => $this->viewstate_encrypted,
     ];
     
     $r = $this->guzzle_client->request('POST', $service_page_url, [
@@ -185,14 +193,24 @@ class TCAdmin
   */
   private function get_anti_forgery_tokens($html)
   {
-    //Fetch event validation and vstate tokens
+    //Fetch event validation and viewstate tokens
     if (preg_match('/<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="(.*?)" \/>/', $html, $event_validation))
       $this->event_validation = $event_validation[1];
     else
       return false;
     
-    if (preg_match('/<input type="hidden" name="__VSTATE" id="__VSTATE" value="(.*?)" \/>/', $html, $vstate))
-      $this->vstate = $vstate[1];
+    if (preg_match('/<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="(.*?)" \/>/', $html, $viewstate))
+      $this->viewstate = $viewstate[1];
+    else
+      return false;
+    
+    if (preg_match('/<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="(.*?)" \/>/', $html, $viewstate_generator))
+      $this->viewstate_generator = $viewstate_generator[1];
+    else
+      return false;
+    
+    if (preg_match('/<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="(.*?)" \/>/', $html, $viewstate_encrypted))
+      $this->viewstate_encrypted = $viewstate_encrypted[1];
     else
       return false;
     
